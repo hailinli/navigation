@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)chrome://net-internals/#events -->
+<html i18n-processed=""><!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <!-- Don't use automatic scaling on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,
+                                   maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="chrome://resources/css/text_defaults.css">
+    <style>/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+/* Only common styles should be declared here. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;  /* Prevents scroll bar flickering on resize. */
+}
+
+ul {
+  padding-left: 2em;
+}
+
+/* This class is used to create the splitter widget in
+ * ResizbleVerticalSplitView. */
+.vertical-splitter {
+  border-left: 1px solid #afafaf;
+  cursor: ew-resize;
+  position: absolute;
+  user-select: none;
+  width: 10px;
+}
+
+/* Needs to be wider on touch devices. */
+.touch .vertical-splitter {
+  width: 5mm;
+}
+
+.log-source-entry {
+  margin: 5px;
+}
+
+pre {
+  font-size: 133%;
+}
+
+/* This class should be given to top-level content boxes (like the view's main
+ * DIV). It gives them a consistent padding, and makes them scrollable. */
+.content-box {
+  overflow: auto;
+  padding: 20px 10px 10px 20px;
+}
+
+.deindent-header,
+.content-box h1,
+.content-box h2,
+.content-box h3,
+.content-box h4,
+.content-box h5,
+.content-box h6 {
+  margin-left: -10px;
+}
+
+/* Styles for TABLE that uses a thin collapsed border. */
+table.styled-table {
+  border-collapse: collapse;
+}
+
+table.styled-table,
+.styled-table th,
+.styled-table td {
+  border: 1px solid #777;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#tab-list {
+  border-right: 1px solid rgb(170,170,170);
+  display: inline-block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+}
+
+#tab-list a {
+  display: inline-block;
+  font-size: 16px;
+  margin: 0;
+  padding: 2px 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+#tab-list a,
+#tab-list a:visited {
+  color: rgb(140,140,140);
+}
+
+#tab-list .selected,
+#tab-list a:hover {
+  color: black;
+}
+
+.styled-table th {
+  background: rgb(224,236,255);
+}
+
+.styled-table th.title {
+  background: rgb(255,217,217);
+}
+
+/* Styling for event logs. */
+.event-log p {
+  white-space: nowrap;
+}
+
+.event-log h4 {
+  margin: 0;
+}
+
+.event-log a {
+  font-weight: bold;
+  text-decoration: none;
+}
+
+/* Styling for text indicating a potential problem or error state. */
+.warning-text {
+  color: rgb(238, 0, 0);
+}
+
+/* Styling for help windows that appear when mousing over an element. */
+.mouse-over-help {
+  background: #EEE;
+  border: 1px solid black;
+  padding: 5px;
+  z-index: 1;
+}
+
+/* Styling for elements that show a help window on mouse over. */
+.mouse-over-help-hover {
+  color: blue;
+  cursor: help;
+}
+</style>
+    <style>/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+.capture-status-view {
+  background: rgb(238, 0, 0);
+  font-size: 133%;
+}
+
+.halted-status-view {
+  background: rgb(0, 138, 0);
+}
+
+.loaded-status-view {
+  background: rgb(113, 113, 171);
+}
+
+#capture-status-view {
+  -webkit-align-items: center;
+  display: -webkit-flex;
+}
+
+.capture-status-view-link,
+.capture-status-view-link:visited,
+.capture-status-view-link:active {
+  color: white;
+  text-decoration: none;
+}
+
+.capture-status-view-link:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+/* Completely un-style the SELECT. Will place an arrow over it manually. */
+#capture-status-view-actions {
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  height: 25px;
+  outline: none;
+  width: 30px;
+}
+
+.capture-status-view-arrow {
+  display: inline-block;
+  position: relative;
+}
+
+.capture-status-view-arrow::after {
+  color: black;
+  content: '\25bc';
+  font-size: 9px;
+  left: 0;
+  line-height: 25px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: 0;
+  width: 100%;
+}
+</style>
+    <style>/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+#events-view-filter-box {
+  background: #efefef;
+  border-bottom: 1px solid #aaa;
+  overflow: hidden;
+  padding: 5px;
+  white-space: nowrap;
+}
+
+#events-view-filter-box input {
+  width: 100%;
+}
+
+#events-view-action-box {
+  background: #efefef;
+  border-top: 1px solid gray;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#events-view-source-list {
+  overflow-x: hidden;
+  overflow-y: auto
+}
+
+#events-view-source-list-table {
+  cursor: pointer;
+}
+
+#events-view-source-list-table thead td {
+  background: rgb(229, 236, 249);
+  font-weight: bold;
+  text-align: left;
+}
+
+#events-view-source-list-table td {
+  border-bottom: 1px solid #afafaf;
+  border-left: 1px solid #afafaf;
+  padding: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#events-view-source-list-tbody .mouseover {
+  background: rgb(244,244,255);
+}
+
+#events-view-source-list-tbody .selected {
+  background: rgb(195, 217, 255);
+}
+
+#events-view-source-list-tbody .error {
+  background: rgb(255, 245, 245);
+}
+
+#events-view-source-list-tbody .inactive {
+  background: rgb(245, 255, 245);
+}
+
+#events-view-source-list-tbody .source-connect-job {
+  color: blue;
+}
+
+#events-view-source-list-tbody .source-host-resolver-impl-job,
+#events-view-source-list-tbody .source-host-resolver-impl-request {
+  color: rgb(32, 96, 96);
+}
+
+#events-view-source-list-tbody .source-disk-cache-entry,
+#events-view-source-list-tbody .source-memory-cache-entry {
+  color: #707070;
+}
+
+#events-view-source-list-tbody .source-socket {
+  color: purple;
+}
+
+#events-view-source-list-tbody .source-udp-socket {
+  color: rgb(128, 48, 48);
+}
+
+#events-view-source-list-tbody .source-pac-file-decider {
+  color: green;
+}
+
+#events-view-source-list-tbody .source-download {
+  color: rgb(112, 112, 0);
+}
+
+#events-view-source-list-tbody .source-none {
+  color: rgb(235, 0, 0);
+}
+</style>
+    <style>/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+#timeline-view-selection-div {
+  display: inline-block;
+  overflow-y: auto;
+}
+
+#timeline-view-selection-toggle {
+  background-color: #fff;
+  background-image: url(chrome://resources/images/select.png);
+  border: none;
+  height: 8px;
+  padding: none;
+  width: 19px;
+}
+
+.timeline-view-rotateleft {
+  transform: rotate(90deg);
+}
+
+.timeline-view-rotateright {
+  transform: rotate(270deg);
+}
+
+#timeline-view-selection-div ul {
+  margin-top: 0;
+  padding-left: 10px;
+}
+
+#timeline-view-selection-div li {
+  list-style: none;
+  white-space: nowrap;
+}
+
+.timeline-view-text {
+  color: black;
+}
+
+#timeline-view-open-sockets {
+  color: rgb(170, 0, 170);
+}
+
+#timeline-view-in-use-sockets {
+  color: rgb(255, 51, 204);
+}
+
+#timeline-view-url-requests {
+  color: black;
+}
+
+#timeline-view-dns-jobs {
+  color: rgb(150, 20, 29);
+}
+
+#timeline-view-bytes-received {
+  color: rgb(0, 187, 0);
+}
+
+#timeline-view-bytes-sent {
+  color: red;
+}
+
+#timeline-view-disk-cache-bytes-read {
+  color: rgb(0, 0, 255);
+}
+
+#timeline-view-disk-cache-bytes-written {
+  color: #999;
+}
+
+/* Need the id in this rule to override the above color rules. */
+#timeline-view-selection-div .timeline-view-hidden {
+  color: white;
+}
+
+#timeline-view-graph-div {
+  background-color: white;
+}
+
+#timeline-view-graph-canvas {
+  cursor: pointer;
+  padding: 10px 10px 2px;
+}
+
+#timeline-view-scrollbar-div {
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+#timeline-view-scrollbar-inner-div {
+  height: 1px;
+}
+</style>
+    <style>/* Copyright (c) 2012 The Chromium Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file. */
+
+#chromeos-view-password-div,
+#chromeos-view-parse-status {
+  margin-top: 20px;
+}
+</style>
+    <script src="chrome://resources/js/util.js"></script>
+    <script src="chrome://resources/js/cr.js"></script>
+    <script src="chrome://resources/js/load_time_data.js"></script>
+    <script src="chrome://net-internals/index.js"></script>
+    <script src="chrome://net-internals/strings.js"></script>
+  </head>
+  <body id="import-view-drop-target">
+    <!--
+Copyright (c) 2013 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!-- Status bar at top of screen -->
+
+<style>
+
+#top-bar-view {
+  -webkit-align-items: center;
+  border-bottom: 1px solid gray;
+  color: #fff;
+  display: -webkit-flex;
+  padding: 2px 2px 4px 7px;
+}
+</style>
+
+<div id="top-bar-view" class="capture-status-view" style="position: absolute; left: 0px; top: 0px; width: 1440px; height: 32px;">
+  <div style="-webkit-flex-grow: 1">
+    <!--
+Copyright (c) 2012 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file.
+-->
+
+<!-- Status bar at top of screen when in capture mode. -->
+<div id="capture-status-view">
+  <span style="-webkit-flex-grow: 1">
+    <a href="chrome://net-internals/#capture" class="capture-status-view-link">capturing</a>
+    <a href="chrome://net-internals/#events" class="capture-status-view-link">events
+    (<span id="capture-status-view-captured-events-count" title="Number of events captured to this window">2039</span>)</a>
+  </span>
+  <span class="capture-status-view-arrow">
+    <select id="capture-status-view-actions" aria-label="Capture Actions">
+      <optgroup label="Capture">
+        <option value="stop">Stop</option>
+        <option value="reset">Reset</option>
+      </optgroup>
+      <optgroup label="Tools">
+        <option value="clear-cache">Clear cache</option>
+        <option value="flush-sockets">Flush sockets</option>
+      </optgroup>
+      <option value="switch-time-format">Switch time format</option>
+    </select>
+  </span>
+</div>
+
+<!-- Status bar at top of screen when capturing is stopped -->
+<div id="halted-status-view" style="display:none">
+  Capturing halted
+</div>
+
+<!-- Status bar at top of screen when displaying a loaded dump file -->
+<div id="loaded-status-view" style="display:none">
+  Displaying log file (<span id="loaded-status-view-dump-file-name"></span>)
+</div>
+
+  </div>
+</div>
+
+
+    <div id="tab-list" style="position: absolute; left: 0px; top: 32px; width: 194px; height: 623px;">
+    <a href="chrome://net-internals/#capture">Capture</a><br><a href="chrome://net-internals/#import">Import</a><br><a href="chrome://net-internals/#proxy">Proxy</a><br><a href="chrome://net-internals/#events" class="selected">Events</a><br><a href="chrome://net-internals/#timeline">Timeline</a><br><a href="chrome://net-internals/#dns">DNS</a><br><a href="chrome://net-internals/#sockets">Sockets</a><br><a href="chrome://net-internals/#alt-svc">Alt-Svc</a><br><a href="chrome://net-internals/#http2">HTTP/2</a><br><a href="chrome://net-internals/#quic">QUIC</a><br><a href="chrome://net-internals/#reporting">Reporting</a><br><a href="chrome://net-internals/#httpCache">Cache</a><br><a href="chrome://net-internals/#modules">Modules</a><br><a href="chrome://net-internals/#hsts">Domain Security Policy</a><br><a href="chrome://net-internals/#bandwidth">Bandwidth</a><br><a href="chrome://net-internals/#prerender">Prerender</a><br><a href="chrome://net-internals/#chromeos" style="display: none;">ChromeOS</a><br></div>
+
+    <div id="main-tab-contents">
+      <!-- Proxy info -->
+
+<style>
+
+#proxy-view-tab-content td,
+#proxy-view-tab-content th {
+  font-size: 85%;
+}
+
+#proxy-view-socks-hints {
+  border: 1px solid orange;
+  padding: 1ex;
+}
+
+#proxy-view-socks-hints-flag {
+  margin: 1ex;
+}
+
+</style>
+
+<div id="proxy-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+ <input type="button" value="Re-apply settings" id="proxy-view-reload-settings" class="hide-when-not-capturing">
+
+  <div id="proxy-view-effective-content">
+    <h4>Effective proxy settings</h4>
+    <pre id="proxy-view-effective-settings"></pre>
+  </div>
+
+  <div id="proxy-view-original-content">
+    <h4>Original proxy settings</h4>
+    <pre id="proxy-view-original-settings"></pre>
+  </div>
+
+  <div id="proxy-view-socks-hints">
+    Note that some traffic such as DNS prefetching will NOT go through the proxy
+    server. To prevent the browser from doing local DNS resolves try adding this
+    command line flag:
+    <pre id="proxy-view-socks-hints-flag"></pre>
+  </div>
+
+  <div id="proxy-view-bad-proxies-div" style="display: none">
+    <h4>
+      Recently failed proxies, marked as bad
+      <input type="button" value="Clear bad proxies" id="proxy-view-clear-bad-proxies" class="hide-when-not-capturing">
+    </h4>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Bad proxy server</th>
+          <th>Time for next retry</th>
+        </tr>
+      </thead>
+      <tbody id="proxy-view-bad-proxies-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+      <!-- Host resolver info -->
+<div id="dns-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <ul style="margin-top: 0">
+    <li><a href="chrome://net-internals/#events&amp;q=type:HOST_RESOLVER_IMPL_JOB%20is:active">View pending lookups</a></li>
+  </ul>
+
+  <div>
+    <h4>Async DNS Configuration</h4>
+    <ul>
+      <li>Internal DNS client enabled:
+        <span id="dns-view-internal-dns-enabled"></span>
+        <span id="dns-view-internal-dns-invalid-config" class="warning-text" style="display: none;">
+          (No valid configuration found)</span>
+      </li>
+    </ul>
+    <table class="styled-table">
+      <tbody id="dns-view-internal-dns-config-tbody"></tbody>
+    </table>
+  </div>
+
+  <h4>
+    Host resolver cache
+    <input type="button" value="Clear host cache" id="dns-view-clear-cache" class="hide-when-not-capturing">
+  </h4>
+  <ul>
+    <li>Capacity: <span id="dns-view-cache-capacity"></span></li>
+  </ul>
+  <h4>Current State</h4>
+  <ul>
+    <li>Active entries: <span id="dns-view-cache-active"></span></li>
+    <li>Expired entries: <span id="dns-view-cache-expired"></span></li>
+    <li>Network changes: <span id="dns-view-network-changes"></span></li>
+  </ul>
+
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>Hostname</th>
+        <th>Family</th>
+        <th>Addresses</th>
+        <th>TTL</th>
+        <th>Expires</th>
+        <th>Network changes</th>
+      </tr>
+    </thead>
+    <tbody id="dns-view-cache-tbody">
+    </tbody>
+  </table>
+</div>
+
+      <style>
+#sockets-view-close-idle-button,
+#sockets-view-flush-button {
+  margin-bottom: 2px;
+}
+</style>
+
+<div id="sockets-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <ul style="margin-top:0">
+    <li class="hide-when-not-capturing">
+      <input type="button" value="Close idle sockets" id="sockets-view-close-idle-button">
+    </li>
+    <li class="hide-when-not-capturing">
+      <input type="button" value="Flush socket pools" id="sockets-view-flush-button">
+      <span class="warning-text">May break pages with active connections</span>
+    </li>
+    <li><a href="chrome://net-internals/#events&amp;q=type:SOCKET%20is:active">View live sockets</a>
+    </li>
+  </ul>
+  <p>
+    </p><div id="sockets-view-pool-div">
+    </div>
+  <p></p>
+  <p>
+    </p><div id="sockets-view-pool-groups-div">
+    </div>
+  <p></p>
+</div>
+
+      <div id="alt-svc-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <h4>Alternate Service Mappings</h4>
+  <div id="alt-svc-view-alternate-protocol-mappings">
+    <div jsdisplay="altSvcMappings.length == 0">None</div>
+    <div jsdisplay="altSvcMappings.length != 0">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Server</th>
+            <th>Alternative Service</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr jsselect="altSvcMappings">
+            <td jscontent="server"></td>
+            <td jscontent="alternative_service"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+      <div id="spdy-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <ul id="spdy-view-status" style="margin-top:0">
+    <li>HTTP/2 Enabled: <span jscontent="enable_http2"></span></li>
+    <li>ALPN Protocols: <span jscontent="alpn_protos"></span></li>
+  </ul>
+
+  <h4>HTTP/2 sessions</h4>
+  <div id="spdy-view-session-info">
+    <!-- Only one of these two are shown -->
+    <div jsdisplay="spdySessionInfo.length == 0">None</div>
+    <div jsdisplay="spdySessionInfo.length != 0">
+      <a href="chrome://net-internals/#events&amp;q=type:HTTP2_SESSION%20is:active">View live HTTP/2 sessions</a>
+      <p>
+        </p><table class="styled-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Proxy</th>
+              <th>ID</th>
+              <th>Negotiated Protocol</th>
+              <th>Active streams</th>
+              <th>Unclaimed pushed</th>
+              <th>Max</th>
+              <th>Initiated</th>
+              <th>Pushed</th>
+              <th>Pushed and claimed</th>
+              <th>Abandoned</th>
+              <th>Received frames</th>
+              <th>Secure</th>
+              <th>Sent settings</th>
+              <th>Received settings</th>
+              <th>Send window</th>
+              <th>Receive window</th>
+              <th>Unacked received data</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr jsselect="spdySessionInfo">
+              <td><span jscontent="host_port_pair"></span>
+                <span jscontent="$this.aliases ? $this.aliases.join(&#39; &#39;) : &#39;&#39;"></span>
+              </td>
+              <td jscontent="proxy"></td>
+              <td><a jsvalues=".href: &#39;#events&amp;q=id:&#39; + source_id" jscontent="source_id"></a></td>
+              <td jscontent="negotiated_protocol"></td>
+              <td jscontent="active_streams"></td>
+              <td jscontent="unclaimed_pushed_streams"></td>
+              <td jscontent="max_concurrent_streams"></td>
+              <td jscontent="streams_initiated_count"></td>
+              <td jscontent="streams_pushed_count"></td>
+              <td jscontent="streams_pushed_and_claimed_count"></td>
+              <td jscontent="streams_abandoned_count"></td>
+              <td jscontent="frames_received"></td>
+              <td jscontent="is_secure"></td>
+              <td jscontent="sent_settings"></td>
+              <td jscontent="received_settings"></td>
+              <td jscontent="send_window_size"></td>
+              <td jscontent="recv_window_size"></td>
+              <td jscontent="unacked_recv_window_bytes"></td>
+              <td jscontent="error"></td>
+            </tr>
+          </tbody>
+        </table>
+      <p></p>
+    </div>
+  </div>
+</div>
+
+      <div id="quic-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <!-- Only one of these two are shown -->
+  <div jsdisplay="!quic_enabled"><h4>QUIC is disabled</h4></div>
+  <div jsdisplay="!!quic_enabled">
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>QUIC Option</th>
+        <th>Value</th>
+     </tr>
+    </thead>
+    <tbody>
+      <tr>
+         <td>Supported Versions</td>
+         <td><span jscontent="$this.supported_versions || &#39;&#39;"></span></td>
+     </tr><tr>
+         <td>Connection options</td>
+         <td><span jscontent="$this.connection_options || &#39;&#39;"></span></td>
+      </tr><tr>
+        <td>Max Packet Length</td>
+        <td><span jscontent="$this.max_packet_length || &#39;&#39;"></span></td>
+      </tr><tr>
+        <td>Idle Connection Timeout In Seconds</td>
+        <td>
+          <span jscontent="$this.idle_connection_timeout_seconds || &#39;&#39;">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Reduced Ping Timeout In Seconds</td>
+        <td>
+          <span jscontent="$this.reduced_ping_timeout_seconds || &#39;&#39;">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Packet Reader Yield After Duration in Milliseconds</td>
+        <td>
+          <span jscontent="$this.packet_reader_yield_after_duration_milliseconds || &#39;&#39;">
+          </span>
+       </td>
+      </tr><tr>
+        <td>Mark QUIC Broken When Network Blackholes</td>
+        <td>
+          <span jscontent="!!$this.mark_quic_broken_when_network_blackholes">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Do Not Mark QUIC Broken on Network Changes</td>
+        <td>
+          <span jscontent="!!$this.do_not_mark_as_broken_on_network_change">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Retry without Alt-Svc on QUIC Errors</td>
+        <td>
+          <span jscontent="!!$this.retry_without_alt_svc_on_quic_errors">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Do Not Fragment</td>
+        <td><span jscontent="!!$this.do_not_fragment"></span></td>
+      </tr><tr>
+        <td>Allow Server Migrations</td>
+        <td><span jscontent="!!$this.allow_server_migration"></span></td>
+      </tr><tr>
+        <td>Migrate Sessions Early</td>
+        <td><span jscontent="!!$this.migrate_sessions_early"></span></td>
+     </tr><tr>
+        <td>Migrate Sessions on Network Change</td>
+        <td>
+          <span jscontent="!!$this.migrate_sessions_on_network_change">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Migrate Sessions Early V2</td>
+        <td><span jscontent="!!$this.migrate_sessions_early_v2"></span></td>
+     </tr><tr>
+        <td>Migrate Sessions on Network Change V2</td>
+        <td>
+          <span jscontent="!!$this.migrate_sessions_on_network_change_v2">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Disable Bidirectional Streams</td>
+        <td><span jscontent="!!$this.disable_bidirectional_streams"></span></td>
+      </tr><tr>
+        <td>Race Cert Verification</td>
+        <td><span jscontent="!!$this.race_cert_verification"></span></td>
+      </tr><tr>
+        <td>Estimate Initial RTT</td>
+        <td><span jscontent="!!$this.estimate_initial_rtt"></span></td>
+      </tr><tr>
+        <td>Force Head of Line Blocking</td>
+        <td><span jscontent="!!$this.force_hol_blocking"></span></td>
+      </tr><tr>
+        <td>Max Server Configs Stored in Properties</td>
+        <td>
+          <span jscontent="$this.max_server_configs_stored_in_properties || &#39;&#39;">
+          </span>
+        </td>
+      </tr><tr>
+        <td>Origins To Force QUIC On</td>
+        <td><span jscontent="$this.origins_to_force_quic_on || &#39;&#39;"></span></td>
+      </tr><tr>
+        <td>Server Push Cancellation</td>
+        <td><span jscontent="!!$this.server_push_cancellation"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>QUIC sessions</h4>
+    <!-- Only one of these two are shown -->
+    <div jsdisplay="!($this.sessions &amp;&amp; sessions.length &gt; 0)">None</div>
+    <div jsdisplay="$this.sessions &amp;&amp; sessions.length &gt; 0">
+      <a href="chrome://net-internals/#events&amp;q=type:QUIC_SESSION%20is:active">View live QUIC sessions</a>
+      <p>
+        </p><table class="styled-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Version</th>
+              <th>Peer address</th>
+              <th>Connection ID</th>
+              <th>Active stream count</th>
+              <th>Active streams</th>
+              <th>Total stream count</th>
+              <th>Packets Sent</th>
+              <th>Packets Lost</th>
+              <th>Packets Received</th>
+              <th>Connected</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr jsselect="sessions">
+              <td jscontent="$this.aliases ? $this.aliases.join(&#39; &#39;) : &#39;&#39;"></td>
+              <td jscontent="version"></td>
+              <td jscontent="peer_address"></td>
+              <td><a jsvalues=".href: &#39;#events&amp;q=type:QUIC_SESSION%20&#39; + connection_id" jscontent="connection_id"></a></td>
+              <td jscontent="open_streams"></td>
+              <td jscontent="$this.active_streams &amp;&amp; $this.active_streams.length &gt; 0 ? $this.active_streams.join(&#39;, &#39;) : &#39;None&#39;"></td>
+              <td jscontent="total_streams"></td>
+              <td jscontent="packets_sent"></td>
+              <td jscontent="packets_lost"></td>
+              <td jscontent="packets_received"></td>
+              <td jscontent="connected"></td>
+            </tr>
+          </tbody>
+        </table>
+      <p></p>
+    </div>
+</div>
+</div>
+
+      <style>
+td.reporting-centered {
+  text-align: center;
+}
+td.reporting-right-justified {
+  text-align: right;
+}
+td .reporting-content-summary {
+}
+td .reporting-content-expand-button {
+  color: rgb(0, 0, 255);
+  cursor: pointer;
+  float: right;
+  font-size: 80%;
+  margin-left: 1em;
+  text-decoration: underline;
+}
+td .reporting-content-detail {
+}
+</style>
+
+<div id="reporting-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <!-- Only one of these two are shown -->
+  <div id="reporting-view-disabled-content"><h4>Reporting is disabled</h4></div>
+  <div id="reporting-view-enabled-content">
+    <h4 style="margin-top:0">Queued reports</h4>
+    <table id="reporting-view-reports-table" class="styled-table">
+      <thead>
+        <tr>
+          <th>Queued</th>
+          <th>URL</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>Content</th>
+        </tr>
+      </thead>
+      <tbody id="reporting-view-reports-tbody">
+      </tbody>
+    </table>
+    <div id="reporting-view-reports-empty">There are no queued reports</div>
+
+    <h4>Per-origin config</h4>
+    <table id="reporting-view-clients-table" class="styled-table">
+      <thead>
+        <tr>
+          <th>Origin</th>
+          <th>Group</th>
+          <th>Subdomains?</th>
+          <th>Expires</th>
+          <th>Endpoint</th>
+          <th>Priority</th>
+          <th>Weight</th>
+          <th>Uploads</th>
+          <th>Failed uploads</th>
+        </tr>
+      </thead>
+      <tbody id="reporting-view-clients-tbody">
+      </tbody>
+    </table>
+    <div id="reporting-view-clients-empty">
+      No origins have provided Reporting headers
+    </div>
+
+    <h4>Network Error Logging policies</h4>
+    <table id="reporting-view-nel-policies-table" class="styled-table">
+      <thead>
+        <tr>
+          <th>Origin</th>
+          <th>Subdomains?</th>
+          <th>Expires</th>
+          <th>Group</th>
+          <th>Success %</th>
+          <th>Failure %</th>
+        </tr>
+      </thead>
+      <tbody id="reporting-view-nel-policies-tbody">
+      </tbody>
+    </table>
+    <div id="reporting-view-nel-policies-disabled">
+      NEL is disabled
+    </div>
+    <div id="reporting-view-nel-policies-empty">
+      No origins have provided NEL headers
+    </div>
+  </div>
+</div>
+
+      <div id="http-cache-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <h4>Statistics</h4>
+  <div id="http-cache-view-cache-stats">Nothing loaded yet.</div>
+</div>
+
+      <!-- Bandwidth info -->
+<style>
+.data-reduction-proxy-view-events-details {
+  background-color: rgb(220,220,220);
+}
+table.borderless-table,
+.borderless-table th,
+.borderless-table td {
+  border: 0px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+</style>
+<div id="bandwidth-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <h2>Data Reduction Proxy Status</h2>
+  <ul id="data-reduction-proxy-view-status">
+    <li>Status: <span id="data-reduction-proxy-enabled"></span></li>
+    <li>Proxy configuration: <span id="data-reduction-proxy-config"></span></li>
+    <li>Probe status: <span id="data-reduction-proxy-probe-status"></span></li>
+    <li id="data-reduction-proxy-bypass-state-container">Bypass details:
+      <span id="data-reduction-proxy-bypass-state-details"></span></li>
+  </ul>
+  <a href="chrome://net-internals/#proxy">View current proxy configuration</a>
+
+  <h4>Bandwidth Savings</h4>
+  <table class="styled-table" id="bandwidth-stats-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Session</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr jsselect="rows">
+        <td jscontent="title"></td>
+        <td jscontent="sessionValue"></td>
+        <td jscontent="historicValue"></td>
+      </tr>
+    </tbody>
+  </table>
+  <h4>Recent events</h4>
+  <div id="data-reduction-proxy-view-events-content">
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Action</th>
+        </tr>
+        <tr>
+          <th colspan="2">Details</th>
+        </tr>
+      </thead>
+      <tbody id="data-reduction-proxy-view-events-tbody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+      <style>
+
+#prerender-view-history-table tr.used {
+  background-color: #F0FFF0;
+}
+
+#prerender-view-history-table tr:not(.used) {
+  background-color: #FFF0F0;
+}
+
+</style>
+
+<div id="prerender-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <ul style="margin-top:0">
+    <li>Prerender Enabled:
+      <span jscontent="enabled"></span>
+      <span jscontent="enabled_note"></span></li>
+    <li>Prerender Omnibox Enabled:
+      <span jscontent="omnibox_enabled"></span></li>
+  </ul>
+  <h4>Active Prerender Pages</h4>
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>URL</th>
+        <th>Duration</th>
+        <th>Loaded</th>
+      </tr>
+    </thead>
+    <tbody id="prerender-view-active-table">
+      <tr jsselect="active">
+        <td jscontent="url"></td>
+        <td jscontent="duration"></td>
+        <td jscontent="is_loaded"></td>
+      </tr>
+    </tbody>
+  </table>
+  <h4>Prerender History</h4>
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>Origin</th>
+        <th>URL</th>
+        <th>Final Status</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="prerender-view-history-table">
+      <tr jsselect="$this.history" jsvalues=".className: final_status.toLowerCase()">
+        <td jscontent="origin"></td>
+        <td jscontent="url"></td>
+        <td jscontent="final_status"></td>
+        <td jscontent="timeutil.dateToString(new Date(parseInt(end_time)))"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+      <style>
+
+.modules-view-extension-list tr.enabled {
+  background-color: #F0FFF0;
+}
+
+.modules-view-extension-list tr:not(.enabled) {
+  background-color: #FFF0F0;
+}
+
+</style>
+
+<div id="modules-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <h4 style="margin-top:0">Chrome Extensions</h4>
+  <div id="modules-view-extension-info">
+    <div jsdisplay="typeof extensionInfo == &#39;undefined&#39;">No information</div>
+    <div jsdisplay="typeof extensionInfo != &#39;undefined&#39; &amp;&amp; extensionInfo.length == 0">None</div>
+    <div jsdisplay="typeof extensionInfo != &#39;undefined&#39; &amp;&amp; extensionInfo.length != 0">
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>App</th>
+            <th>Enabled</th>
+            <th>Name</th>
+            <th>Version</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody class="modules-view-extension-list">
+          <tr jsselect="extensionInfo" jsvalues=".className: enabled ? &#39;enabled&#39; : &#39;&#39;">
+            <td jscontent="id"></td>
+            <td jscontent="packagedApp"></td>
+            <td jscontent="enabled"></td>
+            <td jscontent="name"></td>
+            <td jscontent="version"></td>
+            <td jscontent="description"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Only shown for Windows log dumps -->
+  <div id="modules-view-windows-service-providers" style="display: none;" jsdisplay="typeof $this != &#39;undefined&#39;">
+    <h4>Layered Service Providers</h4>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Version</th>
+          <th>Type</th>
+          <th>Socket Type</th>
+          <th>Protocol</th>
+          <th>Path</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr jsselect="service_providers">
+          <td jscontent="name"></td>
+          <td jscontent="version"></td>
+          <td jscontent="ModulesView.getLayeredServiceProviderType($this)"></td>
+          <td jscontent="ModulesView.getLayeredServiceProviderSocketType($this)"></td>
+          <td jscontent="ModulesView.getLayeredServiceProviderProtocolType($this)"></td>
+          <td jscontent="path"></td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Namespace Providers</h4>
+    <table class="styled-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Version</th>
+          <th>Namespace</th>
+          <th>Active</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr jsselect="namespace_providers">
+          <td jscontent="name"></td>
+          <td jscontent="version"></td>
+          <td jscontent="ModulesView.getNamespaceProviderType($this)"></td>
+          <td jscontent="active"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+      <style>
+#import-view-command-line,
+#import-view-user-comments {
+  /* Wrap long lines inside of PREs */
+  white-space: pre-wrap;
+}
+
+#import-view-load-status-text {
+  /* Wrap long lines inside of PREs */
+  white-space: pre-wrap;
+}
+
+.import-view-pending-log {
+  color: blue;
+  font-weight: bold;
+}
+
+.import-view-success-log {
+  color: green;
+  font-weight: bold;
+}
+
+.import-view-error-log {
+  color: #e00;
+  padding: 5px;
+  border: 1px solid #e00;
+}
+
+.import-view-warning-log {
+  color: #e00;
+}
+
+</style>
+
+<div id="import-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <div>
+    <div style="margin-bottom:20px"><b>TIP</b>: Drag-and-drop files into this window.</div>
+    <input type="file" value="Load log from file" id="import-view-load-log-file" accept=".json">
+    <pre id="import-view-load-status-text"></pre>
+  </div>
+
+  <div id="import-view-loaded-div" style="display: none">
+    <h2>Data Loaded</h2>
+    <table class="styled-table">
+    <tbody><tr>
+      <th>Export date</th>
+      <td jscontent="timeutil.dateToString(new Date(constants.clientInfo.numericDate))"></td>
+    </tr>
+    <tr>
+      <th>Build</th>
+      <td><span jscontent="constants.clientInfo.name"></span>
+        <span jscontent="constants.clientInfo.version"></span>
+        (<span jscontent="constants.clientInfo.official"></span>
+          <span jscontent="constants.clientInfo.cl"></span>)
+        <span jscontent="constants.clientInfo.version_mod">
+      </span></td>
+    </tr>
+    <tr>
+      <th>OS info</th>
+      <td jscontent="constants.clientInfo.os_type"></td>
+    </tr>
+    <tr>
+      <th>Command line</th>
+      <td><pre jscontent="constants.clientInfo.command_line"></pre></td>
+    </tr>
+    <tr>
+      <th>Active Field Trial Groups</th>
+      <td>
+        <span jsselect="constants.activeFieldTrialGroups" jscontent="$this + &#39; &#39;"></span>
+      </td>
+    </tr>
+    <tr>
+      <th>User comments</th>
+      <td>
+        <pre id="import-view-user-comments" jscontent="userComments" jsdisplay="typeof userComments != &#39;undefined&#39;"></pre>
+      </td>
+    </tr>
+    </tbody></table>
+  </div>
+</div>
+
+      <div id="capture-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <div>
+    <input id="capture-view-limit-checkbox" type="checkbox">
+    <label for="capture-view-limit-checkbox">
+      Discard old data under memory pressure.
+    </label>
+    <span id="capture-view-limit-help-hover" class="mouse-over-help-hover">(?)</span>
+    <!-- Inline filter help -->
+    <div id="capture-view-limit-help" class="mouse-over-help" style="display: none;">
+      If you capture all events for a long time, it is possible to exhaust memory
+      and crash. Throwing out older data avoids this problem.
+    </div>
+  </div>
+
+  <div>
+    <input id="capture-view-byte-logging-checkbox" type="checkbox">
+    <label for="capture-view-byte-logging-checkbox">
+      Include the actual bytes sent/received.
+    </label>
+    <span id="capture-view-byte-logging-help-hover" class="mouse-over-help-hover">(?)</span>
+    <div id="capture-view-byte-logging-help" class="mouse-over-help" style="display: none;">
+      This will result in huge log files, and can expose sensitive data.
+    </div>
+  </div>
+
+  <div style="margin-top: 20px">
+    <button id="capture-view-stop-button">Stop</button>
+    <button id="capture-view-reset-button">Reset</button>
+  </div>
+
+</div>
+
+      <style>
+  #domain-security-policy-view-tab-content tt {
+    word-wrap: break-word;
+  }
+</style>
+
+<!-- HSTS/PKP/Expect-CT tab -->
+<div id="domain-security-policy-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <!-- This UI allows a user to query and update the browser's list of
+       HSTS/PKP/Expect-CT domains. -->
+
+  <h3>HSTS/PKP</h3>
+
+  <div class="deindent-header">
+    HSTS is HTTP Strict Transport Security: a way for sites to elect to
+    always use HTTPS. See <a href="https://www.chromium.org/hsts" target="_blank">
+    https://www.chromium.org/hsts</a>. PKP is Public Key Pinning: a way for sites
+    to "pin" themselves to particular public keys that must appear in their
+    certificate chain. See
+    <a href="https://tools.ietf.org/html/rfc7469" target="_blank">https://tools.ietf.org/html/rfc7469</a>.</div>
+
+  <h4>Add HSTS/PKP domain</h4>
+
+  <p>Input a domain name to add it to the HSTS/PKP set:</p>
+  <form id="hsts-view-add-form">
+    Domain: <input type="text" id="hsts-view-add-input" placeholder="example.com"><br>
+    <label>Include subdomains for STS: <input type="checkbox" id="hsts-view-check-sts-input"></label><br>
+    <label>Include subdomains for PKP: <input type="checkbox" id="hsts-view-check-pkp-input"></label><br>
+    <label>Public key fingerprints: <input type="text" id="hsts-view-add-pins" style="width: 25em; max-width: 100%;"></label><br>
+    <p style="font-size: small; color: #767676; font-style: italic; margin-left: 2em; max-width: 40em; max-width: 100%;">(public key fingerprints are comma separated and consist of the hash function followed by a foreslash and the base64 encoded fingerprint, for example <tt>sha256/7HIpactkIAq2Y49orFOOQKurWxmmSFZhBCoQYcRhJ3Y=</tt>)</p>
+    <input type="submit" value="Add" id="hsts-view-add-submit">
+  </form>
+
+  <h4>Query HSTS/PKP domain</h4>
+
+  <p>Input a domain name to query the current HSTS/PKP set:</p>
+  <form id="hsts-view-query-form">
+    Domain: <input type="text" id="hsts-view-query-input" placeholder="example.com">
+    <input type="submit" value="Query" id="hsts-view-query-submit">
+  </form>
+  <div style="margin-top: 1em; margin-left: 2em;" id="hsts-view-query-output"></div>
+
+
+  <h3>Expect-CT</h3>
+
+  <div class="deindent-header">
+    Expect-CT allows sites to elect to always require valid Certificate
+    Transparency information. See
+    <a href="https://tools.ietf.org/html/draft-ietf-httpbis-expect-ct" target="_blank">https://tools.ietf.org/html/draft-ietf-httpbis-expect-ct</a>.</div>
+
+  <h4>Add Expect-CT domain</h4>
+
+  <p>Input a domain name to add it to the Expect-CT set. Leave Enforce unchecked
+     to configure Expect-CT in report-only mode.</p>
+  <form id="expect-ct-view-add-form">
+    <div><label>Domain: <input type="text" id="expect-ct-view-add-input" placeholder="example.com"></label></div>
+    <div><label>Report URI (optional):
+      <input type="text" id="expect-ct-view-add-report-uri-input" placeholder="https://reporting.example.com/expect-ct"></label>
+    </div>
+    <div><label>Enforce:
+      <input type="checkbox" id="expect-ct-view-check-enforce-input"></label>
+    </div>
+    <input type="submit" value="Add" id="expect-ct-view-add-submit">
+  </form>
+
+  <h4>Query Expect-CT domain</h4>
+
+  <p>Input a domain name to query the current Expect-CT set:</p>
+  <form id="expect-ct-view-query-form">
+    <label>Domain: <input type="text" id="expect-ct-view-query-input" placeholder="example.com"></label>
+    <input type="submit" value="Query" id="expect-ct-view-query-submit">
+  </form>
+  <div style="margin-top: 1em; margin-left: 2em;" id="expect-ct-view-query-output">
+  </div>
+
+  <h4>Send test Expect-CT report</h4>
+
+  <p>Trigger a test report to the given report URI. The report will contain a
+    hostname of "expect-ct-report.test" and dummy data in other fields.</p>
+  <form id="expect-ct-view-test-report-form">
+    <label>Report URI: <input type="text" id="expect-ct-view-test-report-uri"></label>
+    <input type="submit" value="Send" id="expect-ct-view-test-report-submit">
+  </form>
+  <div style="margin-top: 1em; margin-left: 2em;" id="expect-ct-view-test-report-output">
+  </div>
+
+  <h3>Delete domain security policies</h3>
+
+  <p>
+    Input a domain name to delete its dynamic domain security policies (HSTS,
+    HPKP, and Expect-CT). (<i>you cannot delete preloaded entries</i>):
+  </p>
+  <form id="domain-security-policy-view-delete-form">
+    <label>Domain: <input type="text" id="domain-security-policy-view-delete-input" placeholder="example.com"></label>
+    <input type="submit" value="Delete" id="domain-security-policy-view-delete-submit">
+  </form>
+
+</div>
+
+      <!-- ================= Events view =================== -->
+
+<!-- Filter Box: This the top bar which contains the search box.  -->
+<div id="events-view-filter-box" style="position: absolute; left: 194px; top: 32px; width: 623px; height: 36px;">
+  <table width="100%">
+    <tbody><tr>
+      <td width="1%">
+        <span id="events-view-filter-help-hover" class="mouse-over-help-hover">(?)</span>
+      </td>
+      <td width="98%"><input type="search" incremental="" id="events-view-filter-input" title="Sort and filter"></td>
+      <td width="1%" id="events-view-filter-count">149 of 149</td>
+    </tr>
+  </tbody></table>
+</div>
+<!-- Inline filter help -->
+<div id="events-view-filter-help" class="mouse-over-help" style="display: none;">
+  Sort options:
+  <ul>
+    <li>sort:id (default)
+    </li><li>sort:desc
+    </li><li>sort:duration
+    </li><li>sort:type
+    </li><li>-sort:&lt;option&gt; Reverses sort order
+  </li></ul>
+
+  Additional filters:
+  <ul>
+    <li>id:#[,#]*
+    </li><li>type:&lt;type&gt;[,&lt;type&gt;]*
+    </li><li>is:active
+    </li><li>is:error
+    </li><li>-&lt;filter&gt; Inverts a filter.
+  </li></ul>
+</div>
+<!-- Events Box: This the panel on the left which lists the sources -->
+<div id="events-view-source-list" style="position: absolute; left: 194px; top: 68px; width: 623px; height: 587px;">
+  <table id="events-view-source-list-table" cellspacing="0" cellpadding="0" width="100%">
+    <thead>
+      <tr>
+        <td style="border-left:0"><input type="checkbox" id="events-view-select-all" title="Select all"></td>
+        <td id="events-view-sort-by-id">ID</td>
+        <td id="events-view-sort-by-source">Source Type</td>
+        <td id="events-view-sort-by-description" width="99%">Description</td>
+      </tr>
+    </thead>
+    <!-- Events table body: This is where request rows go into -->
+    <tbody id="events-view-source-list-tbody"><tr class="source-network-quality-estimator inactive" style=""><td style="border-left: 0px;"><input title="1" type="checkbox"></td><td style="text-align: right;">1</td><td>NETWORK_QUALITY_ESTIMATOR</td><td></td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15469" type="checkbox"></td><td style="text-align: right;">15469</td><td>SOCKET</td><td></td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15515" type="checkbox"></td><td style="text-align: right;">15515</td><td>URL_REQUEST</td><td>https://android.clients.google.com/checkin</td></tr><tr class="source-socket error" style=""><td style="border-left: 0px;"><input title="15611" type="checkbox"></td><td style="text-align: right;">15611</td><td>SOCKET</td><td></td></tr><tr class="source-ssl-connect-job error" style=""><td style="border-left: 0px;"><input title="15612" type="checkbox"></td><td style="text-align: right;">15612</td><td>SSL_CONNECT_JOB</td><td></td></tr><tr class="source-transport-connect-job error" style=""><td style="border-left: 0px;"><input title="15613" type="checkbox"></td><td style="text-align: right;">15613</td><td>TRANSPORT_CONNECT_JOB</td><td></td></tr><tr class="source-socket error" style=""><td style="border-left: 0px;"><input title="15614" type="checkbox"></td><td style="text-align: right;">15614</td><td>SOCKET</td><td></td></tr><tr class="source-transport-connect-job error" style=""><td style="border-left: 0px;"><input title="15615" type="checkbox"></td><td style="text-align: right;">15615</td><td>TRANSPORT_CONNECT_JOB</td><td></td></tr><tr class="source-socket error" style=""><td style="border-left: 0px;"><input title="15616" type="checkbox"></td><td style="text-align: right;">15616</td><td>SOCKET</td><td></td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15698" type="checkbox"></td><td style="text-align: right;">15698</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15699" type="checkbox"></td><td style="text-align: right;">15699</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15700" type="checkbox"></td><td style="text-align: right;">15700</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15701" type="checkbox"></td><td style="text-align: right;">15701</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15702" type="checkbox"></td><td style="text-align: right;">15702</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15703" type="checkbox"></td><td style="text-align: right;">15703</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15704" type="checkbox"></td><td style="text-align: right;">15704</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15705" type="checkbox"></td><td style="text-align: right;">15705</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15706" type="checkbox"></td><td style="text-align: right;">15706</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15707" type="checkbox"></td><td style="text-align: right;">15707</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15708" type="checkbox"></td><td style="text-align: right;">15708</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15709" type="checkbox"></td><td style="text-align: right;">15709</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15710" type="checkbox"></td><td style="text-align: right;">15710</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15711" type="checkbox"></td><td style="text-align: right;">15711</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15712" type="checkbox"></td><td style="text-align: right;">15712</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15713" type="checkbox"></td><td style="text-align: right;">15713</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15714" type="checkbox"></td><td style="text-align: right;">15714</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15715" type="checkbox"></td><td style="text-align: right;">15715</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15716" type="checkbox"></td><td style="text-align: right;">15716</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15717" type="checkbox"></td><td style="text-align: right;">15717</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15718" type="checkbox"></td><td style="text-align: right;">15718</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15734" type="checkbox"></td><td style="text-align: right;">15734</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15739" type="checkbox"></td><td style="text-align: right;">15739</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15740" type="checkbox"></td><td style="text-align: right;">15740</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15741" type="checkbox"></td><td style="text-align: right;">15741</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15742" type="checkbox"></td><td style="text-align: right;">15742</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15743" type="checkbox"></td><td style="text-align: right;">15743</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15744" type="checkbox"></td><td style="text-align: right;">15744</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15745" type="checkbox"></td><td style="text-align: right;">15745</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15746" type="checkbox"></td><td style="text-align: right;">15746</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15747" type="checkbox"></td><td style="text-align: right;">15747</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15762" type="checkbox"></td><td style="text-align: right;">15762</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15763" type="checkbox"></td><td style="text-align: right;">15763</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15764" type="checkbox"></td><td style="text-align: right;">15764</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15765" type="checkbox"></td><td style="text-align: right;">15765</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15770" type="checkbox"></td><td style="text-align: right;">15770</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15868" type="checkbox"></td><td style="text-align: right;">15868</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15873" type="checkbox"></td><td style="text-align: right;">15873</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15880" type="checkbox"></td><td style="text-align: right;">15880</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZpQRsLP6VAo4jLbO5zs0kIy2ji8ikJCMtc9D9PSQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15885" type="checkbox"></td><td style="text-align: right;">15885</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5dc7ce7de537a45f3e88103f129dcc0929e62038&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDAwMCxlbmRkdDoxNTM2ODU0NDAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15886" type="checkbox"></td><td style="text-align: right;">15886</td><td>DISK_CACHE_ENTRY</td><td></td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15887" type="checkbox"></td><td style="text-align: right;">15887</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ad092651400f432eeadee64f5ea78eedc95056ff&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5108&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxfQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15888" type="checkbox"></td><td style="text-align: right;">15888</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5dc7ce7de537a45f3e88103f129dcc0929e62038&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDAwMCxlbmRkdDoxNTM2ODU0NDAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15889" type="checkbox"></td><td style="text-align: right;">15889</td><td>DISK_CACHE_ENTRY</td><td></td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15893" type="checkbox"></td><td style="text-align: right;">15893</td><td>SOCKET</td><td></td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15897" type="checkbox"></td><td style="text-align: right;">15897</td><td>SOCKET</td><td></td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15900" type="checkbox"></td><td style="text-align: right;">15900</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=3d93566b6fe32fd9197fef398d8ccd1bb637ded4&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcToyOX0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15901" type="checkbox"></td><td style="text-align: right;">15901</td><td>DISK_CACHE_ENTRY</td><td></td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15905" type="checkbox"></td><td style="text-align: right;">15905</td><td>SOCKET</td><td></td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15906" type="checkbox"></td><td style="text-align: right;">15906</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=75aaeac870b5703a42d95339089e0433576ca910&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDQwMCxlbmRkdDoxNTM2ODU0ODAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15907" type="checkbox"></td><td style="text-align: right;">15907</td><td>DISK_CACHE_ENTRY</td><td></td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15911" type="checkbox"></td><td style="text-align: right;">15911</td><td>SOCKET</td><td></td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15914" type="checkbox"></td><td style="text-align: right;">15914</td><td>URL_REQUEST</td><td>chrome://net-internals/#events</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15915" type="checkbox"></td><td style="text-align: right;">15915</td><td>URL_REQUEST</td><td>chrome://resources/css/text_defaults.css</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15916" type="checkbox"></td><td style="text-align: right;">15916</td><td>URL_REQUEST</td><td>chrome://resources/js/util.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15917" type="checkbox"></td><td style="text-align: right;">15917</td><td>URL_REQUEST</td><td>chrome://resources/js/cr.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15918" type="checkbox"></td><td style="text-align: right;">15918</td><td>URL_REQUEST</td><td>chrome://resources/js/load_time_data.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15919" type="checkbox"></td><td style="text-align: right;">15919</td><td>URL_REQUEST</td><td>chrome://net-internals/index.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15920" type="checkbox"></td><td style="text-align: right;">15920</td><td>URL_REQUEST</td><td>chrome://net-internals/strings.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15921" type="checkbox"></td><td style="text-align: right;">15921</td><td>URL_REQUEST</td><td>chrome://resources/js/i18n_template.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15922" type="checkbox"></td><td style="text-align: right;">15922</td><td>URL_REQUEST</td><td>chrome://resources/js/jstemplate_compiled.js</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15923" type="checkbox"></td><td style="text-align: right;">15923</td><td>URL_REQUEST</td><td>chrome://resources/images/select.png</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15924" type="checkbox"></td><td style="text-align: right;">15924</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15925" type="checkbox"></td><td style="text-align: right;">15925</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5dc7ce7de537a45f3e88103f129dcc0929e62038&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDAwMCxlbmRkdDoxNTM2ODU0NDAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15926" type="checkbox"></td><td style="text-align: right;">15926</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15927" type="checkbox"></td><td style="text-align: right;">15927</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15928" type="checkbox"></td><td style="text-align: right;">15928</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=7e2e42c34495e2f1d3ddc9099d14e57dd2e5e90b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMH0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15929" type="checkbox"></td><td style="text-align: right;">15929</td><td>DISK_CACHE_ENTRY</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=7e2e42c34495e2f1d3ddc9099d14e57dd2e5e90b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMH0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15930" type="checkbox"></td><td style="text-align: right;">15930</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=7e2e42c34495e2f1d3ddc9099d14e57dd2e5e90b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMH0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15931" type="checkbox"></td><td style="text-align: right;">15931</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15932" type="checkbox"></td><td style="text-align: right;">15932</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15933" type="checkbox"></td><td style="text-align: right;">15933</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15934" type="checkbox"></td><td style="text-align: right;">15934</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15935" type="checkbox"></td><td style="text-align: right;">15935</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15936" type="checkbox"></td><td style="text-align: right;">15936</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15937" type="checkbox"></td><td style="text-align: right;">15937</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15938" type="checkbox"></td><td style="text-align: right;">15938</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15939" type="checkbox"></td><td style="text-align: right;">15939</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15940" type="checkbox"></td><td style="text-align: right;">15940</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15941" type="checkbox"></td><td style="text-align: right;">15941</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15942" type="checkbox"></td><td style="text-align: right;">15942</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request error" style=""><td style="border-left: 0px;"><input title="15943" type="checkbox"></td><td style="text-align: right;">15943</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request" style=""><td style="border-left: 0px;"><input title="15944" type="checkbox"></td><td style="text-align: right;">15944</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15945" type="checkbox"></td><td style="text-align: right;">15945</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ebb9243595a0eaa9a1130436483dc9ae0a267769&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDgwMCxlbmRkdDoxNTM2ODU1MjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15946" type="checkbox"></td><td style="text-align: right;">15946</td><td>DISK_CACHE_ENTRY</td><td>http://pic1.iqiyipic.com/image/20180828/9d/b2/v_118483148_m_601_m1_160_90.jpg</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15947" type="checkbox"></td><td style="text-align: right;">15947</td><td>DISK_CACHE_ENTRY</td><td>http://pic1.iqiyipic.com/image/20180828/9d/b2/v_118483148_m_601_m1_160_90.jpg</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15948" type="checkbox"></td><td style="text-align: right;">15948</td><td>DISK_CACHE_ENTRY</td><td>http://pic1.iqiyipic.com/image/20180828/9d/b2/v_118483148_m_601_m1_160_90.jpg</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15949" type="checkbox"></td><td style="text-align: right;">15949</td><td>DISK_CACHE_ENTRY</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ebb9243595a0eaa9a1130436483dc9ae0a267769&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDgwMCxlbmRkdDoxNTM2ODU1MjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15950" type="checkbox"></td><td style="text-align: right;">15950</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ebb9243595a0eaa9a1130436483dc9ae0a267769&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NDgwMCxlbmRkdDoxNTM2ODU1MjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15951" type="checkbox"></td><td style="text-align: right;">15951</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-transport-connect-job inactive" style=""><td style="border-left: 0px;"><input title="15952" type="checkbox"></td><td style="text-align: right;">15952</td><td>TRANSPORT_CONNECT_JOB</td><td>www.ais.msa.gov.cn:80</td></tr><tr class="source-socket inactive" style=""><td style="border-left: 0px;"><input title="15953" type="checkbox"></td><td style="text-align: right;">15953</td><td>SOCKET</td><td>www.ais.msa.gov.cn:80</td></tr><tr class="source-url-request" style=""><td style="border-left: 0px;"><input title="15954" type="checkbox"></td><td style="text-align: right;">15954</td><td>URL_REQUEST</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15955" type="checkbox"></td><td style="text-align: right;">15955</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15956" type="checkbox"></td><td style="text-align: right;">15956</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15957" type="checkbox"></td><td style="text-align: right;">15957</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ad092651400f432eeadee64f5ea78eedc95056ff&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5108&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxfQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15958" type="checkbox"></td><td style="text-align: right;">15958</td><td>DISK_CACHE_ENTRY</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ad092651400f432eeadee64f5ea78eedc95056ff&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5108&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxfQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15959" type="checkbox"></td><td style="text-align: right;">15959</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=ad092651400f432eeadee64f5ea78eedc95056ff&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5108&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxfQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15960" type="checkbox"></td><td style="text-align: right;">15960</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15961" type="checkbox"></td><td style="text-align: right;">15961</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=04eb548a486c689158b43912360f4bf054b0237b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMX0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15962" type="checkbox"></td><td style="text-align: right;">15962</td><td>DISK_CACHE_ENTRY</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=04eb548a486c689158b43912360f4bf054b0237b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMX0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15963" type="checkbox"></td><td style="text-align: right;">15963</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=04eb548a486c689158b43912360f4bf054b0237b&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x5109&amp;org_id=0&amp;param=e2xiOiIxMTcuNDU2ODYwLDM4Ljg0Nzk4NyIscnQ6IjExOC40Mjk4MzcsMzkuMTU3NDc2IixzaG9yZToxLHNlcTozMX0=&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15964" type="checkbox"></td><td style="text-align: right;">15964</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-url-request inactive" style=""><td style="border-left: 0px;"><input title="15965" type="checkbox"></td><td style="text-align: right;">15965</td><td>URL_REQUEST</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5d9c3cc23d9ecc396e7287be47b9b5e88fa78102&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NTIwMCxlbmRkdDoxNTM2ODU1NjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-disk-cache-entry inactive" style=""><td style="border-left: 0px;"><input title="15966" type="checkbox"></td><td style="text-align: right;">15966</td><td>DISK_CACHE_ENTRY</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5d9c3cc23d9ecc396e7287be47b9b5e88fa78102&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NTIwMCxlbmRkdDoxNTM2ODU1NjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job-controller inactive" style=""><td style="border-left: 0px;"><input title="15967" type="checkbox"></td><td style="text-align: right;">15967</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>http://www.ais.msa.gov.cn/blmcgi?sign=5d9c3cc23d9ecc396e7287be47b9b5e88fa78102&amp;api_key=yAjFdLc$Mb76@9rC&amp;cmd=0x011a&amp;org_id=0&amp;param=e3N0YXJ0ZHQ6MTUzNjg1NTIwMCxlbmRkdDoxNTM2ODU1NjAwLGFyZWE6IjExOC4xMjAxNiwzOC45Njg5OTQ5OTk5OTk5OXwxMTguMTE4MTcxLDM4Ljk2Mjg0OTk5OTk5OTk5NnwxMTguMTEyNTk3LDM4Ljk1NzIwM3wxMTguMTA0Mzg5OTk5OTk5OTgsMzguOTUyMzgzOTk5OTk5OTk1fDExOC4wOTQ2MTEsMzguOTQ4NTA1fDExOC4wODQxMSwzOC45NDU1MTh8MTE4LjA3MzQyMywzOC45NDMzMDEwMDAwMDAwMDV8MTE4LjA2MjgyMDAwMDAwMDAyLDM4Ljk0MTcyM3wxMTguMDUyMzg5OTk5OTk5OTksMzguOTQwNjczOTk5OTk5OTk0fDExOC4wNDIxMiwzOC45NDAwNzU5OTk5OTk5OXwxMTguMDMxOTQzMDAwMDAwMDEsMzguOTM5ODgxMDAwMDAwMDF8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk0MDA3NTk5OTk5OTk5fDExOC4wMTE0OTYsMzguOTQwNjczOTk5OTk5OTk0fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45NDE3MjN8MTE3Ljk5MDQ2MTAwMDAwMDAxLDM4Ljk0MzMwMTAwMDAwMDAwNXwxMTcuOTc5Nzc2LDM4Ljk0NTUxOHwxMTcuOTY5Mjc1LDM4Ljk0ODUwNXwxMTcuOTU5NDk2LDM4Ljk1MjM4Mzk5OTk5OTk5NXwxMTcuOTUxMjg5LDM4Ljk1NzIwM3wxMTcuOTQ1NzE1MDAwMDAwMDIsMzguOTYyODQ5OTk5OTk5OTk2fDExNy45NDM3MjYsMzguOTY4OTk0OTk5OTk5OTl8MTE3Ljk0NTcxNTAwMDAwMDAyLDM4Ljk3NTE0MXwxMTcuOTUxMjg5LDM4Ljk4MDc4NnwxMTcuOTU5NDk2LDM4Ljk4NTYwM3wxMTcuOTY5Mjc1LDM4Ljk4OTQ3ODk5OTk5OTk5NnwxMTcuOTc5Nzc2LDM4Ljk5MjQ2NXwxMTcuOTkwNDYxMDAwMDAwMDEsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wMDEwNjYwMDAwMDAwMSwzOC45OTYyNTh8MTE4LjAxMTQ5NiwzOC45OTczMDV8MTE4LjAyMTc2NDk5OTk5OTk5LDM4Ljk5NzkwM3wxMTguMDMxOTQzMDAwMDAwMDEsMzguOTk4MDk4MDAwMDAwMDA2fDExOC4wNDIxMiwzOC45OTc5MDN8MTE4LjA1MjM4OTk5OTk5OTk5LDM4Ljk5NzMwNXwxMTguMDYyODIwMDAwMDAwMDIsMzguOTk2MjU4fDExOC4wNzM0MjMsMzguOTk0Njc5OTk5OTk5OTk1fDExOC4wODQxMSwzOC45OTI0NjV8MTE4LjA5NDYxMSwzOC45ODk0Nzg5OTk5OTk5OTZ8MTE4LjEwNDM4OTk5OTk5OTk4LDM4Ljk4NTYwM3wxMTguMTEyNTk3LDM4Ljk4MDc4NnwxMTguMTE4MTcxLDM4Ljk3NTE0MXwxMTguMTIwMTYsMzguOTY4OTk0OTk5OTk5OTkifQ==&amp;uid=lijun3169&amp;version=0_1.1</td></tr><tr class="source-http-stream-job inactive" style=""><td style="border-left: 0px;"><input title="15968" type="checkbox"></td><td style="text-align: right;">15968</td><td>HTTP_STREAM_JOB</td><td>http://www.ais.msa.gov.cn/</td></tr><tr class="source-transport-connect-job inactive" style=""><td style="border-left: 0px;"><input title="15969" type="checkbox"></td><td style="text-align: right;">15969</td><td>TRANSPORT_CONNECT_JOB</td><td>www.ais.msa.gov.cn:80</td></tr><tr class="source-socket" style=""><td style="border-left: 0px;"><input title="15970" type="checkbox"></td><td style="text-align: right;">15970</td><td>SOCKET</td><td>www.ais.msa.gov.cn:80</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15971" type="checkbox"></td><td style="text-align: right;">15971</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15972" type="checkbox"></td><td style="text-align: right;">15972</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-udp-socket error" style=""><td style="border-left: 0px;"><input title="15973" type="checkbox"></td><td style="text-align: right;">15973</td><td>UDP_SOCKET</td><td>[2001:4860:4860::8888]:53</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15974" type="checkbox"></td><td style="text-align: right;">15974</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15975" type="checkbox"></td><td style="text-align: right;">15975</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15976" type="checkbox"></td><td style="text-align: right;">15976</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15977" type="checkbox"></td><td style="text-align: right;">15977</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15978" type="checkbox"></td><td style="text-align: right;">15978</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15979" type="checkbox"></td><td style="text-align: right;">15979</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-udp-socket error" style=""><td style="border-left: 0px;"><input title="15980" type="checkbox"></td><td style="text-align: right;">15980</td><td>UDP_SOCKET</td><td>[2001:4860:4860::8888]:53</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15981" type="checkbox"></td><td style="text-align: right;">15981</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15982" type="checkbox"></td><td style="text-align: right;">15982</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15983" type="checkbox"></td><td style="text-align: right;">15983</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15984" type="checkbox"></td><td style="text-align: right;">15984</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15985" type="checkbox"></td><td style="text-align: right;">15985</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15986" type="checkbox"></td><td style="text-align: right;">15986</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-udp-socket error" style=""><td style="border-left: 0px;"><input title="15987" type="checkbox"></td><td style="text-align: right;">15987</td><td>UDP_SOCKET</td><td>[2001:4860:4860::8888]:53</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15988" type="checkbox"></td><td style="text-align: right;">15988</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15989" type="checkbox"></td><td style="text-align: right;">15989</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15990" type="checkbox"></td><td style="text-align: right;">15990</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15991" type="checkbox"></td><td style="text-align: right;">15991</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-udp-socket error" style=""><td style="border-left: 0px;"><input title="15992" type="checkbox"></td><td style="text-align: right;">15992</td><td>UDP_SOCKET</td><td>[2001:4860:4860::8888]:53</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15993" type="checkbox"></td><td style="text-align: right;">15993</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15994" type="checkbox"></td><td style="text-align: right;">15994</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15995" type="checkbox"></td><td style="text-align: right;">15995</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15996" type="checkbox"></td><td style="text-align: right;">15996</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-udp-socket error" style=""><td style="border-left: 0px;"><input title="15997" type="checkbox"></td><td style="text-align: right;">15997</td><td>UDP_SOCKET</td><td>[2001:4860:4860::8888]:53</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="15998" type="checkbox"></td><td style="text-align: right;">15998</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="15999" type="checkbox"></td><td style="text-align: right;">15999</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="16000" type="checkbox"></td><td style="text-align: right;">16000</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="16001" type="checkbox"></td><td style="text-align: right;">16001</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr><tr class="source-http-stream-job-controller" style=""><td style="border-left: 0px;"><input title="16002" type="checkbox"></td><td style="text-align: right;">16002</td><td>HTTP_STREAM_JOB_CONTROLLER</td><td>https://clients1.google.com/tbproxy/af/query?client=Google+Chrome&amp;q=Chc2LjEuMTcxNS4xNDQyL2VuIChHR0xMKRMZTHzrNxZBPE0jLXjEj18kIy20D7T0JCMtTplvgyQU</td></tr><tr class="source-http-stream-job" style=""><td style="border-left: 0px;"><input title="16003" type="checkbox"></td><td style="text-align: right;">16003</td><td>HTTP_STREAM_JOB</td><td>https://clients1.google.com/</td></tr></tbody>
+  </table>
+</div>
+<!-- Splitter Box: This is a handle to resize the vertical divider -->
+<div id="events-view-splitter-box" class="vertical-splitter" style="position: absolute; left: 817px; top: 32px; width: 10px; height: 623px;"></div>
+<!-- Details box: This is the panel on the right which shows information -->
+<div id="events-view-details-log-box" class="event-log content-box" style="position: absolute; left: 827px; top: 32px; width: 613px; height: 623px;"></div>
+
+      <div id="timeline-view-selection-div" style="display: none; position: absolute; left: 194px; top: 32px; width: 186px; height: 623px;">
+  <div style="text-align: right">
+    <button id="timeline-view-selection-toggle" title="Toggle visibility of selection view" class="timeline-view-rotateleft"></button>
+  </div>
+<ul id="timeline-view-selection-ul">
+  <li id="timeline-view-open-sockets"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">Open sockets</span></label>
+  </li>
+  <li id="timeline-view-in-use-sockets"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">In use sockets</span></label>
+  </li>
+  <li id="timeline-view-url-requests"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">URL requests</span></label>
+  </li>
+  <li id="timeline-view-dns-jobs"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">DNS jobs</span></label>
+  </li>
+  <li id="timeline-view-bytes-received"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">Bytes received</span></label>
+  </li>
+  <li id="timeline-view-bytes-sent"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">Bytes sent</span></label>
+  </li>
+  <li id="timeline-view-disk-cache-bytes-read"><label><input type="checkbox" checked="">
+    █ <span class="timeline-view-text">Disk cache bytes read</span></label>
+  </li>
+  <li id="timeline-view-disk-cache-bytes-written" class="timeline-view-hidden"><label><input type="checkbox">
+    █ <span class="timeline-view-text">Disk cache bytes written</span></label>
+  </li>
+</ul>
+</div>
+<div id="timeline-view-graph-div" style="display: none; position: absolute; left: 380px; top: 32px; width: 1060px; height: 622px;">
+  <canvas id="timeline-view-graph-canvas" width="1040" height="607">
+  </canvas>
+</div>
+<div id="timeline-view-scrollbar-div" style="display: none; position: absolute; left: 380px; top: 654px; width: 1060px; height: 1px;">
+  <div id="timeline-view-scrollbar-inner-div" style="width: 1060px;">
+  </div>
+</div>
+
+      <div id="chromeos-view-tab-content" class="content-box" style="display: none; position: absolute; left: 194px; top: 32px; width: 1246px; height: 623px;">
+  <h4 style="margin-top:0">Import ONC file</h4>
+  <div id="chromeos-view-import-div">
+    <label>Import ONC File
+      <input type="file" id="chromeos-view-import-onc">
+    </label>
+  </div>
+  <div id="chromeos-view-password-div" hidden="">
+    This onc file appears to be encrypted.  Please provide the decryption key:
+    <div>
+      <input type="password" id="chromeos-view-onc-password">
+    </div>
+  </div>
+  <div id="chromeos-view-parse-status" hidden="">
+  </div>
+  <div id="chromeos-view-store-debug-logs-div">
+    <h4>Store Logs</h4>
+    <input type="button" id="chromeos-view-store-debug-logs" value="Store Debug Logs">
+    <label for="chromeos-view-store-debug-logs" id="chromeos-view-store-debug-logs-status">
+    </label>
+  </div>
+  <div id="chromeos-view-network-debugging-div">
+    <h4>Network Debugging</h4>
+    <dl>
+      <dt>Select interface for debugging</dt>
+      <dd>
+        <input type="button" value="Wi-Fi" id="chromeos-view-network-debugging-wifi">
+        <input type="button" value="Ethernet" id="chromeos-view-network-debugging-ethernet">
+        <input type="button" value="Cellular" id="chromeos-view-network-debugging-cellular">
+        <input type="button" value="WiMAX" id="chromeos-view-network-debugging-wimax">
+        <input type="button" name="subsystem" value="None" id="chromeos-view-network-debugging-none">
+      </dd>
+    </dl>
+    <label id="chromeos-view-network-debugging-status">
+    </label>
+  </div>
+</div>
+
+    </div>
+
+    <script src="chrome://resources/js/i18n_template.js"></script>
+    <script src="chrome://resources/js/jstemplate_compiled.js"></script>
+  
+
+</body></html>
